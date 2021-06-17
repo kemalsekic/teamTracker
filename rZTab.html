@@ -1,0 +1,35 @@
+<h4>R0</h4>
+
+<div>
+  <input type="text" class="form-control" id="searchInput" placeholder="Search...">
+</div>
+
+<table class="table table-hover .table-sm">
+  <thead>
+    <tr>
+      <th scope="col">#</th>
+      <th scope="col">Attempter</th>
+      <th scope="col">Subtask ID</th>
+      <th scope="col">Status</th>
+      <th scope="col">Annotations</th>
+      <th scope="col">Notes</th>
+      <th scope="col"></th>
+      <th scope="col"></th>
+    </tr>
+  </thead>
+  <tbody id="searchResults">
+    
+  </tbody>
+</table>
+
+<template id="rowTemplate">
+  <tr class="result-box">
+      <th class="userID" scope="row"></th>
+      <td class="attempter"></td>
+      <td class="subTaskID"></td>
+      <td class="status"></td>
+      <td class="annos text-center"></td>
+      <td class="notes"></td>
+      <td><button type="button" class="btn btn-outline-dark edit-button btn-sm">Edit</button></td>
+    </tr>
+</template>
