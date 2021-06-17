@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6" crossorigin="anonymous">
+    <style>
+      .nav-link{
+        cursor:pointer;
+      }
+
+      #loading{
+        position:fixed;
+        top:0;
+        left:0;
+        z-index:10000;
+        width:100vw;
+        height:100vh;
+        background-color: rgba(255,255,255,0.5);
+      }
+    </style>
+
+    <title>Team Ashley Tracker!</title>
+  </head>
+  <body>
+    <div class="container"> 
+      <nav id="navigation" class="mb-3">
+        <ul class="nav nav-tabs main-nav">
+          <li class="nav-item">
+            <div class="nav-link active" id="labeler-info-link">Find Labelers</div>
+          </li>
+          <li class="nav-item">
+            <div class="nav-link" id="Add-Lab-link">Add Labeler</div>
+          </li>
+          <li class="nav-item">
+            <div class="nav-link invisible" id="Submit-Tasks-link">Submit Ready Tasks</div>
+          </li>
+        </ul>
+      </nav>
+      <div id="app"></div>
+    </div>
+
+    <div id="loading" class="d-flex justify-content-center align-items-center invisible">
+      <div class="spinner-border" style="width: 3rem; height: 3rem;" role="status">
+        <span class="visually-hidden">Loading...</span>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js" integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf" crossorigin="anonymous"></script>
+    <script>
+      var data;
+
+      function loadView(options){
+        var id = typeof options.id === "undefined" ? "app" : options.id;
+        var cb = typeof options.callback === "undefined" ? function(){} : options.callback;
+        
+        loadingStart();
+        google.script.run.withSuccessHandler(function(html){
+          document.getElementById(id).innerHTML = html;
+          loadingEnd();
+          typeof options.params === "undefined" ? cb() : cb(options.params);
+        })[options.func]();
+      }
+
+      function setDataForSearch(){
+        loadingStart();
+        google.script.run.withSuccessHandler(function(dataReturned){
+          data = dataReturned.slice();
+          loadingEnd();
+        }).getLabelerSearch();
+      }
+
+      function search(){
+        var searchInput = document.getElementById("searchInput").value.toString().toLowerCase().trim();
+        var searchWords = searchInput.split(/\s+/);
+        var searchColumns = [1,2];
+        
+        var resultsArray = searchInput === "" ? [] : data.filter(function(r){
+
+          return searchWords.every(function(word){
+            return searchColumns.some(function(colIndex){
+              return r[colIndex].toString().toLowerCase().indexOf(word) !== -1
+            });
+          });
+
+        });
+        var searchResultsBox = document.getElementById("searchResults");
+        var templateBox = document.getElementById("rowTemplate");
+        var template = templateBox.content;
+
+        searchResultsBox.innerHTML = "";
+
+        resultsArray.forEach(function(r){
+          var tr = template.cloneNode(true);
+          var userIDCol = tr.querySelector(".userID");
+          var userNameCol = tr.querySelector(".username");
+          var corpEmailCol = tr.querySelector(".corpEmail");
+          var revLvlCol = tr.querySelector(".revLvl");
+          var deleteButton = tr.querySelector(".delete-button");
+          var editButton = tr.querySelector(".edit-button");
+
+          userIDCol.textContent = r[0];
+          deleteButton.dataset.userID = r[0];
+          editButton.dataset.userID = r[0];
+          userNameCol.textContent = r[1];
+          corpEmailCol.textContent = r[2];
+          revLvlCol.textContent = r[5];
+          searchResultsBox.appendChild(tr);
+        });
+      }
+
+      function displayConfirmationDelete(e){
+        if(e.target.dataset.buttonState === "delete"){
+          e.target.previousElementSibling.classList.remove("d-none");
+          e.target.textContent = "Cancel";
+          e.target.dataset.buttonState = "cancel";
+        }else{
+          e.target.previousElementSibling.classList.add("d-none");
+          e.target.textContent = "Delete";
+          e.target.dataset.buttonState = "delete";
+        }
+      }
+
+      function deleteLabeler(e){
+        var theUsersID = e.target.dataset.userID;
+        loadingStart();
+        google.script.run.withSuccessHandler(function(){
+          e.target.closest(".result-box").remove();
+          var ids = data.map(function(r){return r[0].toString().toLowerCase()});
+          var index = ids.indexOf(theUsersID.toString().toLowerCase());
+          data.splice(index,1);
+          loadingEnd();
+        }).deleteByID(theUsersID);
+      }
+
+      function afterEditViewLoads(params){
+        //usersID: e.target.dataset.userID
+        loadingStart();
+        loadRevSelect();
+        document.getElementById("editUserID").value = params.usersID;
+        google.script.run.withSuccessHandler(function(labelerInfo){
+          document.getElementById("editUserName").value = labelerInfo.userName;
+          document.getElementById("corpEmailID").value = labelerInfo.corpEmail;
+          document.getElementById("addRevLevel").value = labelerInfo.revLvl;
+          loadingEnd();
+        }).getLabelerByID(params.usersID);
+      }
+
+      function editLabelerInfo(){
+        loadingStart();
+        var labelerInfo = {};
+        labelerInfo.userName = document.getElementById("editUserName").value;
+        labelerInfo.corpEmail = document.getElementById("editUserName").value + "@761link.net";
+        labelerInfo.revLvl = document.getElementById("addRevLevel").value;
+
+        var id = document.getElementById("editUserID").value;
+
+        google.script.run.withSuccessHandler(function(res){
+          document.getElementById("corpEmailID").value = labelerInfo.corpEmail;
+          loadingEnd();
+          document.getElementById("save-success-message").classList.remove("invisible");
+          setTimeout(function(){
+          document.getElementById("save-success-message").classList.add("invisible");
+          },2500);
+        }).editLabelerInfo(id,labelerInfo);
+      }
+
+      function loadRevSelect(){
+        google.script.run.withSuccessHandler(afterSelects).getRevSelects();
+      }
+
+      function afterSelects(ops){
+        var item = document.getElementById("addRevLevel");
+
+        ops.forEach(function(r){
+          var option = document.createElement("option");
+          option.textContent = r[0];
+          item.appendChild(option);
+        });
+      }
+
+      function addLabeler(){
+        loadingStart();
+        var labelerInfo = {};
+        labelerInfo.userName = document.getElementById("addUserName").value;
+        labelerInfo.revLvl = document.getElementById("addRevLevel").value;
+
+        google.script.run.withSuccessHandler(function(){
+        document.getElementById("addUserName").value = "";
+        document.getElementById("addRevLevel").value = "";
+        document.getElementById("save-success-message").classList.remove("invisible");
+        loadingEnd();
+        setTimeout(function(){
+          document.getElementById("save-success-message").classList.add("invisible");
+          },2500);
+
+        }).addLabeler(labelerInfo);
+      }
+
+      function loadLabInfo(){
+        loadView({func:"loadLabInfo", callback: setDataForSearch});
+      }
+      
+      function loadSubmitTasks(){
+        loadView({func:"loadSubmitTasks", callback: setDataForSearch});
+      }
+
+      function loadEditLabInfo(e){
+        loadView({func:"loadEditLabInfo", callback: afterEditViewLoads, params:{usersID: e.target.dataset.userID}});
+      }
+
+      function loadAddLabTab(){
+        loadRevSelect();
+        loadView({func:"loadAddLabTab"});
+      }
+
+      function activeTabChange(e){
+        var navLinks = document.querySelectorAll(".main-nav .nav-link");
+
+        navLinks.forEach(function(linkEl){
+          linkEl.classList.remove("active");
+        });
+
+        e.target.classList.add("active");
+      }
+
+      function loadingStart(){
+        document.getElementById("loading").classList.remove("invisible");
+      }
+      function loadingEnd(){
+        document.getElementById("loading").classList.add("invisible");
+      }
+
+      document.getElementById("labeler-info-link").addEventListener("click",loadLabInfo);
+      document.getElementById("Add-Lab-link").addEventListener("click",loadAddLabTab);
+      document.getElementById("Submit-Tasks-link").addEventListener("click",loadSubmitTasks);
+
+      function inputEventHandler(e){
+        if(e.target.matches("#searchInput")){
+          search();
+        }
+      }
+
+      function clickEventHandler(e){
+        if(e.target.matches(".delete-button")){
+          deleteLabeler(e);
+        }
+        if(e.target.matches(".before-delete-button")){
+          displayConfirmationDelete(e);
+        }
+        if(e.target.matches(".edit-button")){
+          loadEditLabInfo(e);
+        }
+        if(e.target.matches("#save-changes")){
+          editLabelerInfo();
+        }
+        if(e.target.matches("#cancel-changes")){
+          loadLabInfo();
+        }
+        if(e.target.matches("#add-lab-button")){
+          addLabeler();
+        }
+      }
+
+      function navClickEventHandler(e){
+        if(e.target.matches(".nav-link")){
+          activeTabChange(e);
+        }
+      }
+
+      document.getElementById("app").addEventListener("input",inputEventHandler);
+      document.getElementById("app").addEventListener("click",clickEventHandler);
+      document.getElementById("navigation").addEventListener("click",navClickEventHandler);
+      document.addEventListener("DOMContentLoaded",loadLabInfo());
+      
+    </script>
+  </body>
+</html>
