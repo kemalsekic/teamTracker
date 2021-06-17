@@ -1,0 +1,32 @@
+<h4>Edit Task Detail</h4>
+
+<div class="add-TQE-form">  
+  <div class="mb-3">
+    <label for="editSubID">Subtask ID</label>
+    <input type="text" class="form-control" id="editSubID" readonly>
+  </div>  
+  <div class="mb-3">
+    <label for="editAtt">Attempter</label>
+    <input type="text" class="form-control" id="editAtt" readonly>
+  </div>
+  <div>
+    <label for="editStat">Status</label>
+    <select class="form-select mb-3" id="editStat">
+    </select>
+  </div>
+  <div> 
+    <label for="editAnnos">Annotations</label>
+    <select class="form-select mb-3" id="editAnnos">
+    </select>
+  </div>
+  <div class="mb-3">
+  <label for="editNotes">Notes</label>
+  <input type="text" class="form-control" id="editNotes">
+  </div>
+  <button type="submit" class="btn btn-primary" id="save-changes">Save</button>
+  <button type="submit" class="btn btn-primary" id="cancel-changes">Cancel Changes</button>
+</div>
+
+<div class="alert alert-success invisible mt-3" id="save-success-message" role="alert">
+  Changes Saved!
+</div>
